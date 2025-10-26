@@ -11,20 +11,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:drive_inspection/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('App launches smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const DriveInspectionApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Allow initial frame to render
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // The app should build successfully and contain a MaterialApp
+    expect(find.byType(MaterialApp), findsOneWidget);
+
+    // The app should show the permission checking UI
+    // (We can't test actual sensor functionality in unit tests)
+    expect(find.text('Checking permissions...'), findsOneWidget);
   });
 }
