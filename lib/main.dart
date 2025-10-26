@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'screens/acceleration_display_screen.dart';
-import 'widgets/permission_gate.dart';
 
 void main() {
   runApp(const DriveInspectionApp());
@@ -17,9 +16,7 @@ class DriveInspectionApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const PermissionGate(
-        child: AccelerationDisplayScreen(),
-      ),
+      home: const AccelerationDisplayScreen(),
     );
   }
 }
