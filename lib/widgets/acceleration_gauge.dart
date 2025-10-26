@@ -4,7 +4,8 @@ import '../models/acceleration_reading.dart';
 /// Displays current G-force magnitude and components with color coding.
 ///
 /// Shows total magnitude, lateral (left/right), and longitudinal (forward/backward)
-/// G-forces. Color changes based on magnitude intensity.
+/// G-forces. Vertical component is excluded as it's not relevant for driving.
+/// Color changes based on magnitude intensity.
 class AccelerationGauge extends StatelessWidget {
   final AccelerationReading? reading;
 
@@ -51,12 +52,6 @@ class AccelerationGauge extends StatelessWidget {
           'Longitudinal',
           reading!.longitudinalG,
           Icons.swap_vert,
-        ),
-        const SizedBox(height: 8),
-        _buildComponentRow(
-          'Vertical',
-          reading!.verticalG,
-          Icons.height,
         ),
       ],
     );

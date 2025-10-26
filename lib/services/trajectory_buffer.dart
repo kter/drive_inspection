@@ -7,8 +7,8 @@ import '../models/trajectory_point.dart';
 /// Maintains a fixed-size FIFO buffer of recent trajectory points,
 /// automatically removing old data. Extends ChangeNotifier for reactive UI updates.
 class TrajectoryBuffer extends ChangeNotifier {
-  /// Maximum buffer size: 300 points for 10 seconds at 30 Hz
-  static const int maxPoints = 300;
+  /// Maximum buffer size: 30 points for 1 second at 30 Hz
+  static const int maxPoints = 30;
 
   final Queue<TrajectoryPoint> _points = Queue<TrajectoryPoint>();
 
