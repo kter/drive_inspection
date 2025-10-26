@@ -1,0 +1,45 @@
+/// Types of driving events that affect the driving score
+enum DrivingEventType {
+  hardAcceleration,  // 急加速
+  hardBraking,       // 急減速
+  sharpTurn,         // 急ハンドル
+}
+
+/// Represents a single driving event with its severity
+class DrivingEvent {
+  final DrivingEventType type;
+  final DateTime timestamp;
+  final double magnitude; // G-force magnitude
+
+  DrivingEvent({
+    required this.type,
+    required this.timestamp,
+    required this.magnitude,
+  });
+
+  /// Get display name in Japanese
+  String get displayName {
+    switch (type) {
+      case DrivingEventType.hardAcceleration:
+        return '急加速';
+      case DrivingEventType.hardBraking:
+        return '急減速';
+      case DrivingEventType.sharpTurn:
+        return '急ハンドル';
+    }
+  }
+
+  /// Calculate penalty points for this event
+  int get penaltyPoints {
+    // Base penalty: 5 points
+    // Additional penalty based on severity
+    final basePenalty = 5;
+    final severityPenalty = ((magnitude - 0.3) / 0.1 * 2).round().clamp(0, 10);
+    return basePenalty + severityPenalty;
+  }
+
+  @override
+  String toString() {
+    return 'DrivingEvent(type: $displayName, magnitude: ${magnitude.toStringAsFixed(2)}G, penalty: ${penaltyPoints}pt)';
+  }
+}

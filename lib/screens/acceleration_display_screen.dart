@@ -5,10 +5,12 @@ import '../models/sensor_availability.dart';
 import '../models/trajectory_point.dart';
 import '../services/accelerometer_service.dart';
 import '../services/trajectory_buffer.dart';
+import '../services/session_manager.dart';
 import '../widgets/acceleration_gauge.dart';
 import '../widgets/acceleration_chart.dart';
 import '../widgets/loading_state.dart';
 import '../widgets/trajectory_painter.dart';
+import '../widgets/score_display.dart';
 import 'sensor_error_screen.dart';
 import 'dart:collection';
 
@@ -29,6 +31,7 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
     with WidgetsBindingObserver {
   late AccelerometerService _service;
   late TrajectoryBuffer _buffer;
+  late SessionManager _sessionManager;
   AccelerationReading? _currentReading;
   String? _errorMessage;
   bool _isInitializing = true;
@@ -46,11 +49,20 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
     WidgetsBinding.instance.addObserver(this);
     _service = AccelerometerService();
     _buffer = TrajectoryBuffer();
+    _sessionManager = SessionManager();
+
+    // Listen to session manager changes
+    _sessionManager.addListener(_onSessionChanged);
 
     // Enable wakelock to prevent screen sleep
     WakelockPlus.enable();
 
     _initialize();
+  }
+
+  /// Called when session manager state changes
+  void _onSessionChanged() {
+    setState(() {});
   }
 
   /// Initialize accelerometer service and set up data stream
@@ -66,6 +78,9 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
       _service.stream.listen(
         (reading) {
           if (!mounted) return;
+
+          // Process reading for session manager (event detection)
+          _sessionManager.processReading(reading);
 
           // Add to chart data buffer
           _chartData.add(reading);
@@ -154,6 +169,7 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _sessionManager.removeListener(_onSessionChanged);
     _service.dispose();
     _buffer.dispose();
     _chartData.clear();
@@ -197,6 +213,23 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
       appBar: AppBar(
         title: const Text('G-Force Monitor'),
         actions: [
+          // Session start/stop button
+          if (_sessionManager.hasActiveSession)
+            IconButton(
+              icon: const Icon(Icons.stop_circle, color: Colors.red),
+              onPressed: () {
+                _sessionManager.endSession();
+              },
+              tooltip: 'セッション終了',
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.play_circle, color: Colors.green),
+              onPressed: () {
+                _sessionManager.startSession();
+              },
+              tooltip: 'セッション開始',
+            ),
           IconButton(
             icon: const Icon(Icons.clear),
             onPressed: _clearTrajectory,
@@ -238,6 +271,16 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
             ),
 
           const SizedBox(height: 12),
+
+          // Score display (only when session active or just ended)
+          if (_sessionManager.currentSession != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: ScoreDisplay(session: _sessionManager.currentSession),
+            ),
+
+          if (_sessionManager.currentSession != null)
+            const SizedBox(height: 12),
 
           // G-force magnitude and components
           AccelerationGauge(reading: _currentReading),
