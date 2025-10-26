@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import '../models/acceleration_reading.dart';
 import '../models/driving_event.dart';
 import '../models/driving_session.dart';
+import 'database_service.dart';
 
 /// Manages driving sessions and detects driving events
 class SessionManager extends ChangeNotifier {
+  final DatabaseService _databaseService = DatabaseService();
   DrivingSession? _currentSession;
 
   // Thresholds for event detection
@@ -32,13 +34,22 @@ class SessionManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// End current driving session
-  void endSession() {
+  /// End current driving session and save to database
+  Future<void> endSession() async {
     if (!hasActiveSession) {
       throw StateError('No active session');
     }
 
     _currentSession!.end();
+
+    // Save to database
+    try {
+      await _databaseService.saveSession(_currentSession!);
+    } catch (e) {
+      // Log error but don't throw - session is still ended in memory
+      debugPrint('Failed to save session to database: $e');
+    }
+
     notifyListeners();
   }
 

@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'driving_event.dart';
 
 /// Represents a driving session with score calculation
 class DrivingSession {
+  final int? id;  // Database ID (null for unsaved sessions)
   final DateTime startTime;
   DateTime? endTime;
   final List<DrivingEvent> events;
@@ -11,9 +13,12 @@ class DrivingSession {
   double totalMagnitude = 0.0;
 
   DrivingSession({
+    this.id,
     required this.startTime,
     this.endTime,
     List<DrivingEvent>? events,
+    this.totalReadings = 0,
+    this.totalMagnitude = 0.0,
   }) : events = events ?? [];
 
   /// Check if session is active
@@ -69,6 +74,38 @@ class DrivingSession {
   /// End the session
   void end() {
     endTime = DateTime.now();
+  }
+
+  /// Convert to Map for database storage
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'startTime': startTime.millisecondsSinceEpoch,
+      'endTime': endTime?.millisecondsSinceEpoch,
+      'totalReadings': totalReadings,
+      'totalMagnitude': totalMagnitude,
+      'events': jsonEncode(events.map((e) => e.toMap()).toList()),
+      'score': calculateScore(),
+    };
+  }
+
+  /// Create from Map (database row)
+  factory DrivingSession.fromMap(Map<String, dynamic> map) {
+    final List<dynamic> eventsJson = jsonDecode(map['events'] as String);
+    final events = eventsJson
+        .map((e) => DrivingEvent.fromMap(e as Map<String, dynamic>))
+        .toList();
+
+    return DrivingSession(
+      id: map['id'] as int?,
+      startTime: DateTime.fromMillisecondsSinceEpoch(map['startTime'] as int),
+      endTime: map['endTime'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['endTime'] as int)
+          : null,
+      events: events,
+      totalReadings: map['totalReadings'] as int,
+      totalMagnitude: map['totalMagnitude'] as double,
+    );
   }
 
   @override

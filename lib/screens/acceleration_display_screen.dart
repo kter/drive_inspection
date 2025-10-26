@@ -12,6 +12,7 @@ import '../widgets/loading_state.dart';
 import '../widgets/trajectory_painter.dart';
 import '../widgets/score_display.dart';
 import 'sensor_error_screen.dart';
+import 'session_history_screen.dart';
 import 'dart:collection';
 
 /// Main screen displaying real-time acceleration with trajectory visualization.
@@ -213,12 +214,24 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
       appBar: AppBar(
         title: const Text('G-Force Monitor'),
         actions: [
+          // History button
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SessionHistoryScreen(),
+                ),
+              );
+            },
+            tooltip: '運転履歴',
+          ),
           // Session start/stop button
           if (_sessionManager.hasActiveSession)
             IconButton(
               icon: const Icon(Icons.stop_circle, color: Colors.red),
-              onPressed: () {
-                _sessionManager.endSession();
+              onPressed: () async {
+                await _sessionManager.endSession();
               },
               tooltip: 'セッション終了',
             )
