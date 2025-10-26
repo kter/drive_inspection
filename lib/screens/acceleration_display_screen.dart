@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/acceleration_reading.dart';
 import '../models/sensor_availability.dart';
 import '../models/trajectory_point.dart';
 import '../services/accelerometer_service.dart';
 import '../services/trajectory_buffer.dart';
 import '../widgets/acceleration_gauge.dart';
+import '../widgets/acceleration_chart.dart';
 import '../widgets/loading_state.dart';
 import '../widgets/trajectory_painter.dart';
 import 'sensor_error_screen.dart';
+import 'dart:collection';
 
 /// Main screen displaying real-time acceleration with trajectory visualization.
 ///
@@ -30,12 +33,23 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
   String? _errorMessage;
   bool _isInitializing = true;
 
+  // Buffer for chart data (30 seconds worth of data = 150 points)
+  final Queue<AccelerationReading> _chartData = Queue<AccelerationReading>();
+  static const int _maxChartPoints = 150;
+
+  // Canvas size for trajectory calculation
+  Size? _canvasSize;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _service = AccelerometerService();
     _buffer = TrajectoryBuffer();
+
+    // Enable wakelock to prevent screen sleep
+    WakelockPlus.enable();
+
     _initialize();
   }
 
@@ -53,22 +67,20 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
         (reading) {
           if (!mounted) return;
 
+          // Add to chart data buffer
+          _chartData.add(reading);
+          if (_chartData.length > _maxChartPoints) {
+            _chartData.removeFirst();
+          }
+
+          // Add trajectory point
+          final point = _calculateTrajectoryPoint(reading);
+          _buffer.addPoint(point);
+
           setState(() {
             _currentReading = reading;
             _errorMessage = null;
           });
-
-          // Transform reading to trajectory point and add to buffer
-          // Get canvas size for proper scaling
-          final size = MediaQuery.of(context).size;
-          final point = TrajectoryPoint.fromReading(
-            reading,
-            20.0, // Scale factor X (pixels per m/s²)
-            20.0, // Scale factor Y (pixels per m/s²)
-            size.width / 2, // Center X
-            size.height / 2 - 100, // Center Y (offset for gauge above)
-          );
-          _buffer.addPoint(point);
         },
         onError: (error) {
           if (!mounted) return;
@@ -93,6 +105,39 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
     }
   }
 
+  /// Calculate trajectory point from reading using canvas center
+  TrajectoryPoint _calculateTrajectoryPoint(AccelerationReading reading) {
+    if (_canvasSize == null) {
+      // Fallback if canvas size not yet measured
+      return TrajectoryPoint.fromReading(
+        reading,
+        20.0,
+        20.0,
+        200,
+        200,
+      );
+    }
+
+    // Calculate scale factor dynamically to match concentric circles
+    const gToMetersPerSecondSquared = 9.81;
+    const maxG = 0.4;
+    final maxAcceleration = maxG * gToMetersPerSecondSquared;
+    final maxRadius = (_canvasSize!.width < _canvasSize!.height
+            ? _canvasSize!.width
+            : _canvasSize!.height) /
+        2 *
+        0.85;
+    final scaleFactor = maxRadius / maxAcceleration;
+
+    return TrajectoryPoint.fromReading(
+      reading,
+      scaleFactor, // Scale factor X (pixels per m/s²)
+      scaleFactor, // Scale factor Y (pixels per m/s²)
+      _canvasSize!.width / 2, // Center X within canvas
+      _canvasSize!.height / 2, // Center Y within canvas
+    );
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Pause sensors when app goes to background (battery optimization)
@@ -111,6 +156,9 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
     WidgetsBinding.instance.removeObserver(this);
     _service.dispose();
     _buffer.dispose();
+    _chartData.clear();
+    // Disable wakelock when screen is disposed
+    WakelockPlus.disable();
     super.dispose();
   }
 
@@ -158,6 +206,24 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
       ),
       body: Column(
         children: [
+          // Wakelock warning message
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8.0),
+            color: Colors.amber.shade100,
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.info_outline, size: 16, color: Colors.amber),
+                SizedBox(width: 8),
+                Text(
+                  '画面のスリープを無効にしています',
+                  style: TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+
           // Error message display
           if (_errorMessage != null)
             Container(
@@ -171,53 +237,59 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
               ),
             ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
           // G-force magnitude and components
           AccelerationGauge(reading: _currentReading),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
 
-          // Trajectory visualization label
-          const Text(
-            'Trajectory (10 seconds)',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Trajectory canvas
+          // Trajectory canvas with LayoutBuilder to measure size
           Expanded(
+            flex: 2,
             child: Container(
               margin: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey.shade300),
                 borderRadius: BorderRadius.circular(8.0),
               ),
-              child: RepaintBoundary(
-                child: CustomPaint(
-                  painter: TrajectoryPainter(_buffer),
-                  size: Size.infinite,
-                  child: Container(), // Child needed for Size.infinite to work
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Update canvas size for trajectory calculation
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_canvasSize == null ||
+                        _canvasSize!.width != constraints.maxWidth ||
+                        _canvasSize!.height != constraints.maxHeight) {
+                      setState(() {
+                        _canvasSize = Size(
+                          constraints.maxWidth,
+                          constraints.maxHeight,
+                        );
+                      });
+                    }
+                  });
+
+                  return RepaintBoundary(
+                    child: CustomPaint(
+                      painter: TrajectoryPainter(_buffer),
+                      size: Size.infinite,
+                      child: Container(),
+                    ),
+                  );
+                },
               ),
             ),
           ),
 
-          // Status information
+          // Acceleration chart
           Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'Points: ${_buffer.length}/${TrajectoryBuffer.maxPoints}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: AccelerationChart(
+              readings: _chartData.toList(),
             ),
           ),
+
+          const SizedBox(height: 8),
         ],
       ),
     );
