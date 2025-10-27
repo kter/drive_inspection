@@ -5,17 +5,21 @@ import 'package:rxdart/rxdart.dart';
 import '../models/acceleration_reading.dart';
 import '../models/sensor_availability.dart';
 
-/// Provides real-time accelerometer data stream at 30 Hz.
+/// Provides real-time accelerometer data stream at 30 Hz with smoothing filter.
 ///
 /// Manages sensor lifecycle, error handling, and stream transformation
 /// from raw sensor events to domain AccelerationReading objects.
+/// Applies a moving average filter to reduce noise from road bumps.
 class AccelerometerService {
-  StreamSubscription<AccelerationReading>? _subscription;
+  StreamSubscription<List<AccelerationReading>>? _subscription;
   final StreamController<AccelerationReading> _controller =
       StreamController<AccelerationReading>.broadcast();
 
-  /// Real-time acceleration readings at ~30 Hz
+  /// Real-time acceleration readings at ~30 Hz with smoothing applied
   Stream<AccelerationReading> get stream => _controller.stream;
+
+  /// Window size for moving average filter (5 samples ≈ 1 second at 5Hz)
+  static const int _filterWindowSize = 5;
 
   bool _isInitialized = false;
   bool _isPaused = false;
@@ -50,13 +54,17 @@ class AccelerometerService {
       // Create sensor stream with 30 Hz sampling (33ms period)
       // Uses userAccelerometerEventStream which has gravity already filtered out
       // Apply RxDart throttling to control sampling rate at ~30 Hz
+      // Then apply moving average filter to smooth out road bumps
       _subscription = userAccelerometerEventStream()
-          .throttleTime(const Duration(milliseconds: 33))
+          .throttleTime(const Duration(milliseconds: 200)) // ~5 Hz for better filtering
           .map((event) => AccelerationReading.fromEvent(event))
           .where((reading) => reading.isValid)
+          .bufferCount(_filterWindowSize, 1) // Sliding window of 5 samples
           .listen(
-            (reading) {
-              _controller.add(reading);
+            (readings) {
+              // Calculate moving average
+              final smoothed = _calculateMovingAverage(readings);
+              _controller.add(smoothed);
 
               // Debug: Measure actual update rate
               _eventCount++;
@@ -106,6 +114,36 @@ class AccelerometerService {
       _subscription?.resume();
       _isPaused = false;
     }
+  }
+
+  /// Calculate moving average of acceleration readings.
+  ///
+  /// Averages all acceleration components (x, y, z)
+  /// across the window to smooth out spikes from road bumps.
+  AccelerationReading _calculateMovingAverage(List<AccelerationReading> readings) {
+    if (readings.isEmpty) {
+      throw ArgumentError('Cannot calculate average of empty list');
+    }
+
+    double sumX = 0.0;
+    double sumY = 0.0;
+    double sumZ = 0.0;
+
+    for (final reading in readings) {
+      sumX += reading.x;
+      sumY += reading.y;
+      sumZ += reading.z;
+    }
+
+    final count = readings.length;
+
+    // Use the most recent timestamp
+    return AccelerationReading(
+      x: sumX / count,
+      y: sumY / count,
+      z: sumZ / count,
+      timestamp: readings.last.timestamp,
+    );
   }
 
   /// Stop sensor monitoring and clean up resources.
