@@ -11,8 +11,10 @@ import '../widgets/acceleration_chart.dart';
 import '../widgets/loading_state.dart';
 import '../widgets/trajectory_painter.dart';
 import '../widgets/score_display.dart';
+import '../theme/data_visualization_colors.dart';
 import 'sensor_error_screen.dart';
 import 'session_history_screen.dart';
+import 'settings_screen.dart';
 import 'dart:collection';
 
 /// Main screen displaying real-time acceleration with trajectory visualization.
@@ -214,6 +216,18 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
       appBar: AppBar(
         title: const Text('G-Force Monitor'),
         actions: [
+          // Settings button
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
+            tooltip: '設定',
+          ),
           // History button
           IconButton(
             icon: const Icon(Icons.history),
@@ -229,7 +243,8 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
           // Session start/stop button
           if (_sessionManager.hasActiveSession)
             IconButton(
-              icon: const Icon(Icons.stop_circle, color: Colors.red),
+              icon: Icon(Icons.stop_circle,
+                  color: Theme.of(context).colorScheme.error),
               onPressed: () async {
                 await _sessionManager.endSession();
               },
@@ -237,7 +252,8 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
             )
           else
             IconButton(
-              icon: const Icon(Icons.play_circle, color: Colors.green),
+              icon: Icon(Icons.play_circle,
+                  color: Theme.of(context).colorScheme.secondary),
               onPressed: () {
                 _sessionManager.startSession();
               },
@@ -256,15 +272,18 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(8.0),
-            color: Colors.amber.shade100,
-            child: const Row(
+            color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.info_outline, size: 16, color: Colors.amber),
-                SizedBox(width: 8),
+                Icon(Icons.info_outline,
+                    size: 16, color: Theme.of(context).colorScheme.secondary),
+                const SizedBox(width: 8),
                 Text(
                   '画面のスリープを無効にしています',
-                  style: TextStyle(fontSize: 12, color: Colors.black87),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface),
                 ),
               ],
             ),
@@ -275,10 +294,10 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(8.0),
-              color: Colors.red.shade100,
+              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
               child: Text(
                 _errorMessage!,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -306,7 +325,8 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
             child: Container(
               margin: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
                 borderRadius: BorderRadius.circular(8.0),
               ),
               child: LayoutBuilder(
@@ -325,9 +345,19 @@ class _AccelerationDisplayScreenState extends State<AccelerationDisplayScreen>
                     }
                   });
 
+                  final theme = Theme.of(context);
+                  final vizColors =
+                      theme.extension<DataVisualizationColors>()!;
+
                   return RepaintBoundary(
                     child: CustomPaint(
-                      painter: TrajectoryPainter(_buffer),
+                      painter: TrajectoryPainter(
+                        _buffer,
+                        trajectoryColor: vizColors.trajectoryColor,
+                        currentPositionColor: theme.colorScheme.error,
+                        gridColor: theme.colorScheme.outline,
+                        textColor: theme.colorScheme.onSurface,
+                      ),
                       size: Size.infinite,
                       child: Container(),
                     ),

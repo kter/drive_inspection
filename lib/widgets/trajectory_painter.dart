@@ -6,14 +6,102 @@ import '../services/trajectory_buffer.dart';
 /// Draws a continuous path from trajectory points in the buffer,
 /// with a current position indicator. Uses RepaintBoundary optimization
 /// for efficient rendering at 30 Hz update rate.
+///
+/// Performance optimizations:
+/// - Caches Paint objects to avoid allocation on every frame
+/// - Caches TextPainter objects for static labels
+/// - Reuses Paint objects with modified alpha for trajectory gradient
 class TrajectoryPainter extends CustomPainter {
   final TrajectoryBuffer buffer;
+  final Color trajectoryColor;
+  final Color currentPositionColor;
+  final Color gridColor;
+  final Color textColor;
+
+  // Cached Paint objects for performance
+  late final Paint _trajectoryPaint;
+  late final Paint _outerIndicatorPaint;
+  late final Paint _innerIndicatorPaint;
+  late final Paint _circlePaint;
+  late final Paint _crosshairPaint;
+  late final Paint _dotPaint;
+
+  // Cached TextPainters for static labels
+  late final List<TextPainter> _gLabelPainters;
+  late final TextPainter _placeholderPainter;
 
   /// Create painter that listens to buffer changes
   ///
   /// The painter will automatically repaint when buffer is updated
   /// via ChangeNotifier.
-  TrajectoryPainter(this.buffer) : super(repaint: buffer);
+  TrajectoryPainter(
+    this.buffer, {
+    required this.trajectoryColor,
+    required this.currentPositionColor,
+    required this.gridColor,
+    required this.textColor,
+  }) : super(repaint: buffer) {
+    // Initialize cached Paint objects
+    _trajectoryPaint = Paint()
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    _outerIndicatorPaint = Paint()
+      ..color = currentPositionColor.withValues(alpha: 0.3)
+      ..style = PaintingStyle.fill;
+
+    _innerIndicatorPaint = Paint()
+      ..color = currentPositionColor
+      ..style = PaintingStyle.fill;
+
+    _circlePaint = Paint()
+      ..color = gridColor.withValues(alpha: 0.2)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    _crosshairPaint = Paint()
+      ..color = gridColor.withValues(alpha: 0.3)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    _dotPaint = Paint()
+      ..color = gridColor.withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+
+    // Initialize cached TextPainters for G labels
+    final textStyle = TextStyle(
+      color: gridColor.withValues(alpha: 0.6),
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+    );
+
+    _gLabelPainters = [0.1, 0.2, 0.3, 0.4].map((gLevel) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: '${gLevel.toStringAsFixed(1)}G',
+          style: textStyle,
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      painter.layout();
+      return painter;
+    }).toList();
+
+    // Initialize placeholder TextPainter
+    _placeholderPainter = TextPainter(
+      text: TextSpan(
+        text: 'Move device to see trajectory',
+        style: TextStyle(
+          color: textColor,
+          fontSize: 16,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    _placeholderPainter.layout();
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -41,47 +129,35 @@ class TrajectoryPainter extends CustomPainter {
     if (points.length < 2) return;
 
     // Draw line segments with gradient alpha (older = more transparent)
+    // Reuse cached Paint object, only update color for each segment
     for (int i = 0; i < points.length - 1; i++) {
       final progress = i / (points.length - 1);
       final alpha = 0.1 + (progress * 0.6); // Fade from 0.1 to 0.7
 
-      final paint = Paint()
-        ..color = Colors.blue.withValues(alpha: alpha)
-        ..strokeWidth = 2.0
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
+      _trajectoryPaint.color = trajectoryColor.withValues(alpha: alpha);
 
       canvas.drawLine(
         Offset(points[i].x, points[i].y),
         Offset(points[i + 1].x, points[i + 1].y),
-        paint,
+        _trajectoryPaint,
       );
     }
   }
 
   /// Draw indicator at current acceleration position
   void _drawCurrentPositionIndicator(Canvas canvas, dynamic currentPoint) {
-    // Outer circle (pulsing effect)
-    final outerPaint = Paint()
-      ..color = Colors.red.withValues(alpha: 0.3)
-      ..style = PaintingStyle.fill;
-
+    // Outer circle (pulsing effect) - use cached Paint
     canvas.drawCircle(
       Offset(currentPoint.x, currentPoint.y),
       10.0,
-      outerPaint,
+      _outerIndicatorPaint,
     );
 
-    // Inner circle (solid)
-    final innerPaint = Paint()
-      ..color = Colors.red
-      ..style = PaintingStyle.fill;
-
+    // Inner circle (solid) - use cached Paint
     canvas.drawCircle(
       Offset(currentPoint.x, currentPoint.y),
       6.0,
-      innerPaint,
+      _innerIndicatorPaint,
     );
   }
 
@@ -101,36 +177,19 @@ class TrajectoryPainter extends CustomPainter {
 
     final gLevels = [0.1, 0.2, 0.3, 0.4];
 
-    final circlePaint = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.2)
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-
-    final textStyle = TextStyle(
-      color: Colors.grey.withValues(alpha: 0.6),
-      fontSize: 11,
-      fontWeight: FontWeight.w500,
-    );
-
-    for (final gLevel in gLevels) {
+    for (int i = 0; i < gLevels.length; i++) {
+      final gLevel = gLevels[i];
       final radius = gLevel * gToMetersPerSecondSquared * scaleFactor;
 
-      // Draw circle
+      // Draw circle using cached Paint
       canvas.drawCircle(
         Offset(centerX, centerY),
         radius,
-        circlePaint,
+        _circlePaint,
       );
 
-      // Draw label at top of circle
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: '${gLevel.toStringAsFixed(1)}G',
-          style: textStyle,
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
+      // Draw label at top of circle using cached TextPainter
+      final textPainter = _gLabelPainters[i];
       textPainter.paint(
         canvas,
         Offset(
@@ -147,52 +206,32 @@ class TrajectoryPainter extends CustomPainter {
     final centerY = size.height / 2;
     final crosshairSize = 20.0;
 
-    final paint = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.3)
-      ..strokeWidth = 1.0
-      ..style = PaintingStyle.stroke;
-
-    // Horizontal line
+    // Horizontal line - use cached Paint
     canvas.drawLine(
       Offset(centerX - crosshairSize, centerY),
       Offset(centerX + crosshairSize, centerY),
-      paint,
+      _crosshairPaint,
     );
 
-    // Vertical line
+    // Vertical line - use cached Paint
     canvas.drawLine(
       Offset(centerX, centerY - crosshairSize),
       Offset(centerX, centerY + crosshairSize),
-      paint,
+      _crosshairPaint,
     );
 
-    // Center dot
-    final dotPaint = Paint()
-      ..color = Colors.grey.withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawCircle(Offset(centerX, centerY), 3.0, dotPaint);
+    // Center dot - use cached Paint
+    canvas.drawCircle(Offset(centerX, centerY), 3.0, _dotPaint);
   }
 
   /// Draw placeholder text when no data
   void _drawPlaceholder(Canvas canvas, Size size) {
-    final textPainter = TextPainter(
-      text: const TextSpan(
-        text: 'Move device to see trajectory',
-        style: TextStyle(
-          color: Colors.grey,
-          fontSize: 16,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-
-    textPainter.layout();
-    textPainter.paint(
+    // Use cached TextPainter
+    _placeholderPainter.paint(
       canvas,
       Offset(
-        (size.width - textPainter.width) / 2,
-        (size.height - textPainter.height) / 2,
+        (size.width - _placeholderPainter.width) / 2,
+        (size.height - _placeholderPainter.height) / 2,
       ),
     );
   }

@@ -20,11 +20,11 @@ class ScoreDisplay extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -49,12 +49,14 @@ class ScoreDisplay extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: _getScoreColor(score),
+                      color: _getScoreColor(context, score),
                     ),
                   ),
-                  const Text(
+                  Text(
                     ' / 100',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                    style: TextStyle(
+                        fontSize: 18,
+                        color: Theme.of(context).colorScheme.outline),
                   ),
                 ],
               ),
@@ -62,11 +64,14 @@ class ScoreDisplay extends StatelessWidget {
               // Duration
               Row(
                 children: [
-                  const Icon(Icons.timer, size: 20, color: Colors.grey),
+                  Icon(Icons.timer,
+                      size: 20, color: Theme.of(context).colorScheme.outline),
                   const SizedBox(width: 4),
                   Text(
                     _formatDuration(duration),
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    style: TextStyle(
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.outline),
                   ),
                 ],
               ),
@@ -80,22 +85,25 @@ class ScoreDisplay extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildEventCount(
+                context,
                 '急加速',
                 session!.getEventCount(DrivingEventType.hardAcceleration),
                 Icons.trending_up,
-                Colors.red,
+                Theme.of(context).colorScheme.error,
               ),
               _buildEventCount(
+                context,
                 '急減速',
                 session!.getEventCount(DrivingEventType.hardBraking),
                 Icons.trending_down,
-                Colors.orange,
+                Theme.of(context).colorScheme.secondary,
               ),
               _buildEventCount(
+                context,
                 '急ハンドル',
                 session!.getEventCount(DrivingEventType.sharpTurn),
                 Icons.turn_right,
-                Colors.blue,
+                Theme.of(context).colorScheme.primary,
               ),
             ],
           ),
@@ -106,9 +114,10 @@ class ScoreDisplay extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 '平均加速度: ',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                style: TextStyle(
+                    fontSize: 14, color: Theme.of(context).colorScheme.outline),
               ),
               Text(
                 '${session!.averageMagnitude.toStringAsFixed(2)}G',
@@ -125,8 +134,8 @@ class ScoreDisplay extends StatelessWidget {
   }
 
   /// Build event count widget
-  Widget _buildEventCount(
-      String label, int count, IconData icon, Color color) {
+  Widget _buildEventCount(BuildContext context, String label, int count,
+      IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, size: 24, color: color),
@@ -141,17 +150,18 @@ class ScoreDisplay extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(
+              fontSize: 12, color: Theme.of(context).colorScheme.outline),
         ),
       ],
     );
   }
 
   /// Get color based on score
-  Color _getScoreColor(int score) {
-    if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.orange;
-    return Colors.red;
+  Color _getScoreColor(BuildContext context, int score) {
+    if (score >= 80) return Theme.of(context).colorScheme.primary;
+    if (score >= 60) return Theme.of(context).colorScheme.secondary;
+    return Theme.of(context).colorScheme.error;
   }
 
   /// Format duration as MM:SS

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/driving_session.dart';
 import '../models/driving_event.dart';
 import '../services/database_service.dart';
+import 'settings_screen.dart';
 
 /// Screen displaying history of saved driving sessions
 class SessionHistoryScreen extends StatefulWidget {
@@ -59,7 +60,9 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: const Text('削除'),
           ),
         ],
@@ -85,6 +88,20 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('運転履歴'),
+        actions: [
+          // Settings button
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
+            tooltip: '設定',
+          ),
+        ],
       ),
       body: _buildBody(),
     );
@@ -102,11 +119,12 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            Icon(Icons.error_outline,
+                size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -120,20 +138,23 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     }
 
     if (_sessions.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
+            Icon(Icons.history,
+                size: 64, color: Theme.of(context).colorScheme.outline),
+            const SizedBox(height: 16),
             Text(
               '運転履歴はありません',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+              style: TextStyle(
+                  fontSize: 18, color: Theme.of(context).colorScheme.outline),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               'セッションを開始して運転データを記録しましょう',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              style: TextStyle(
+                  fontSize: 14, color: Theme.of(context).colorScheme.outline),
               textAlign: TextAlign.center,
             ),
           ],
@@ -182,7 +203,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 20),
                     onPressed: () => _deleteSession(session),
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.outline,
                   ),
                 ],
               ),
@@ -223,11 +244,14 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   // Duration
                   Row(
                     children: [
-                      const Icon(Icons.timer, size: 16, color: Colors.grey),
+                      Icon(Icons.timer,
+                          size: 16, color: Theme.of(context).colorScheme.outline),
                       const SizedBox(width: 4),
                       Text(
                         _formatDuration(duration),
-                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.outline),
                       ),
                     ],
                   ),
@@ -241,19 +265,19 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   _buildEventBadge(
                     '急加速',
                     session.getEventCount(DrivingEventType.hardAcceleration),
-                    Colors.red,
+                    Theme.of(context).colorScheme.error,
                   ),
                   const SizedBox(width: 12),
                   _buildEventBadge(
                     '急減速',
                     session.getEventCount(DrivingEventType.hardBraking),
-                    Colors.orange,
+                    Theme.of(context).colorScheme.secondary,
                   ),
                   const SizedBox(width: 12),
                   _buildEventBadge(
                     '急ハンドル',
                     session.getEventCount(DrivingEventType.sharpTurn),
-                    Colors.blue,
+                    Theme.of(context).colorScheme.primary,
                   ),
                 ],
               ),
@@ -292,9 +316,9 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   }
 
   Color _getScoreColor(int score) {
-    if (score >= 80) return Colors.green;
-    if (score >= 60) return Colors.orange;
-    return Colors.red;
+    if (score >= 80) return Theme.of(context).colorScheme.primary;
+    if (score >= 60) return Theme.of(context).colorScheme.secondary;
+    return Theme.of(context).colorScheme.error;
   }
 
   String _formatDuration(Duration duration) {
@@ -330,7 +354,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               ),
               const SizedBox(height: 8),
               if (session.events.isEmpty)
-                const Text('イベントなし', style: TextStyle(color: Colors.grey))
+                Text('イベントなし',
+                    style: TextStyle(color: Theme.of(context).colorScheme.outline))
               else
                 ...session.events.map((event) => Padding(
                       padding: const EdgeInsets.only(bottom: 4.0),
@@ -358,7 +383,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(label,
+              style: TextStyle(color: Theme.of(context).colorScheme.outline)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
         ],
       ),

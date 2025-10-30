@@ -32,7 +32,7 @@ class PermissionErrorScreen extends StatelessWidget {
             Icon(
               Icons.sensors_off,
               size: 80,
-              color: Colors.orange.shade700,
+              color: Theme.of(context).colorScheme.secondary,
             ),
             const SizedBox(height: 24),
             Text(
@@ -48,7 +48,7 @@ class PermissionErrorScreen extends StatelessWidget {
               _getMessage(),
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[700],
+                color: Theme.of(context).colorScheme.outline,
               ),
               textAlign: TextAlign.center,
             ),

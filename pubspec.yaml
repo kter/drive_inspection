@@ -47,6 +47,10 @@ dependencies:
   path: ^1.9.1
   intl: ^0.20.1
 
+  # Theme state management and persistence
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

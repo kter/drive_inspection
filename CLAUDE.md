@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2025-10-26
 
 ## Active Technologies
+- Dart 3.9.2 / Flutter SDK 3.24+ (001-dark-mode)
+- SharedPreferences for theme mode preference (key-value store) (001-dark-mode)
 
 - Dart 3.9.2+ with Flutter 3.x (current Flutter stable) (001-accel-display-mvp)
 
@@ -22,6 +24,7 @@ tests/
 Dart 3.9.2+ with Flutter 3.x (current Flutter stable): Follow standard conventions
 
 ## Recent Changes
+- 001-dark-mode: Added Dart 3.9.2 / Flutter SDK 3.24+
 
 - 001-accel-display-mvp: Added Dart 3.9.2+ with Flutter 3.x (current Flutter stable)
 
