@@ -123,7 +123,7 @@ class _PermissionGateState extends State<PermissionGate> with WidgetsBindingObse
                 'Checking permissions...',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.outline,
                 ),
               ),
             ],

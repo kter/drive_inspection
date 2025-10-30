@@ -28,7 +28,7 @@ class SensorErrorScreen extends StatelessWidget {
             Icon(
               _getIcon(),
               size: 80,
-              color: _getColor(),
+              color: _getColor(context),
             ),
             const SizedBox(height: 24),
             Text(
@@ -44,7 +44,7 @@ class SensorErrorScreen extends StatelessWidget {
               availability.errorMessage,
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[700],
+                color: Theme.of(context).colorScheme.outline,
               ),
               textAlign: TextAlign.center,
             ),
@@ -71,7 +71,7 @@ class SensorErrorScreen extends StatelessWidget {
                 'This app requires a device with accelerometer sensors to function.',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.outline,
                   fontStyle: FontStyle.italic,
                 ),
                 textAlign: TextAlign.center,
@@ -94,14 +94,14 @@ class SensorErrorScreen extends StatelessWidget {
     }
   }
 
-  Color _getColor() {
+  Color _getColor(BuildContext context) {
     switch (availability) {
       case SensorAvailability.unavailable:
-        return Colors.grey.shade700;
+        return Theme.of(context).colorScheme.outline;
       case SensorAvailability.malfunctioning:
-        return Colors.orange.shade700;
+        return Theme.of(context).colorScheme.secondary;
       default:
-        return Colors.red.shade700;
+        return Theme.of(context).colorScheme.error;
     }
   }
 

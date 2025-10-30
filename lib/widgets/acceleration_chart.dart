@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/acceleration_reading.dart';
+import '../theme/data_visualization_colors.dart';
 
 /// Line chart displaying acceleration history over time.
 ///
@@ -17,16 +18,27 @@ class AccelerationChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final vizColors = theme.extension<DataVisualizationColors>()!;
+
     return Container(
       height: 150,
       padding: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(
+            color: theme.colorScheme.outline.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(8.0),
-        color: Colors.white,
+        color: theme.colorScheme.surface,
       ),
       child: CustomPaint(
-        painter: _AccelerationChartPainter(readings),
+        painter: _AccelerationChartPainter(
+          readings,
+          lateralColor: vizColors.chartPrimary,
+          longitudinalColor: vizColors.chartSecondary,
+          axesColor: theme.colorScheme.outline,
+          gridColor: theme.colorScheme.outline.withValues(alpha: 0.3),
+          textColor: theme.colorScheme.onSurface,
+        ),
         size: Size.infinite,
         child: Container(),
       ),
@@ -34,10 +46,122 @@ class AccelerationChart extends StatelessWidget {
   }
 }
 
+/// CustomPainter for acceleration chart with performance optimizations.
+///
+/// Performance optimizations:
+/// - Caches Paint objects to avoid allocation on every frame
+/// - Caches TextPainter objects for static labels
+/// - Efficiently compares readings lists in shouldRepaint
 class _AccelerationChartPainter extends CustomPainter {
   final List<AccelerationReading> readings;
+  final Color lateralColor;
+  final Color longitudinalColor;
+  final Color axesColor;
+  final Color gridColor;
+  final Color textColor;
 
-  _AccelerationChartPainter(this.readings);
+  // Cached Paint objects for performance
+  late final Paint _axesPaint;
+  late final Paint _gridPaint;
+  late final Paint _lateralLinePaint;
+  late final Paint _longitudinalLinePaint;
+  late final Paint _legendLinePaint;
+
+  // Cached TextPainters for static labels
+  late final List<TextPainter> _yAxisLabelPainters;
+  late final List<TextPainter> _xAxisLabelPainters;
+  late final TextPainter _placeholderPainter;
+  late final List<TextPainter> _legendLabelPainters;
+
+  _AccelerationChartPainter(
+    this.readings, {
+    required this.lateralColor,
+    required this.longitudinalColor,
+    required this.axesColor,
+    required this.gridColor,
+    required this.textColor,
+  }) {
+    // Initialize cached Paint objects
+    _axesPaint = Paint()
+      ..color = axesColor
+      ..strokeWidth = 1.0;
+
+    _gridPaint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 0.5;
+
+    _lateralLinePaint = Paint()
+      ..color = lateralColor
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    _longitudinalLinePaint = Paint()
+      ..color = longitudinalColor
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    _legendLinePaint = Paint()
+      ..strokeWidth = 2.0;
+
+    // Initialize Y-axis labels (G values: 0.4, 0.2, 0, -0.2, -0.4)
+    final labelStyle = TextStyle(
+      color: textColor,
+      fontSize: 10,
+    );
+
+    _yAxisLabelPainters = [0.4, 0.2, 0, -0.2, -0.4].map((gValue) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: gValue.toStringAsFixed(1),
+          style: labelStyle,
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      painter.layout();
+      return painter;
+    }).toList();
+
+    // Initialize X-axis labels (30s, 20s, 10s, 0s)
+    _xAxisLabelPainters = [30, 20, 10, 0].map((timeValue) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: '${timeValue}s',
+          style: labelStyle,
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      painter.layout();
+      return painter;
+    }).toList();
+
+    // Initialize placeholder
+    _placeholderPainter = TextPainter(
+      text: TextSpan(
+        text: 'No data yet',
+        style: TextStyle(
+          color: textColor,
+          fontSize: 14,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    _placeholderPainter.layout();
+
+    // Initialize legend labels
+    _legendLabelPainters = ['Lateral', 'Longitudinal'].map((label) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: labelStyle,
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      painter.layout();
+      return painter;
+    }).toList();
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -52,18 +176,18 @@ class _AccelerationChartPainter extends CustomPainter {
     // Draw grid lines
     _drawGridLines(canvas, size);
 
-    // Draw data lines for lateral and longitudinal axes
+    // Draw data lines for lateral and longitudinal axes using cached Paint objects
     _drawDataLine(
       canvas,
       size,
       readings.map((r) => r.lateralG).toList(),
-      Colors.red,
+      _lateralLinePaint,
     );
     _drawDataLine(
       canvas,
       size,
       readings.map((r) => r.longitudinalG).toList(),
-      Colors.green,
+      _longitudinalLinePaint,
     );
 
     // Draw legend
@@ -71,74 +195,46 @@ class _AccelerationChartPainter extends CustomPainter {
   }
 
   void _drawAxes(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.grey.shade600
-      ..strokeWidth = 1.0;
-
-    // Y-axis
+    // Y-axis - use cached Paint
     canvas.drawLine(
       Offset(30, 10),
       Offset(30, size.height - 30),
-      paint,
+      _axesPaint,
     );
 
-    // X-axis
+    // X-axis - use cached Paint
     canvas.drawLine(
       Offset(30, size.height - 30),
       Offset(size.width - 10, size.height - 30),
-      paint,
+      _axesPaint,
     );
   }
 
   void _drawGridLines(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.grey.shade300
-      ..strokeWidth = 0.5;
-
     final chartHeight = size.height - 40;
     final chartWidth = size.width - 40;
 
-    // Horizontal grid lines (G values: -0.4, -0.2, 0, 0.2, 0.4)
+    // Horizontal grid lines (G values: 0.4, 0.2, 0, -0.2, -0.4)
     for (int i = 0; i <= 4; i++) {
       final y = 10 + (chartHeight * i / 4);
+
+      // Draw grid line using cached Paint
       canvas.drawLine(
         Offset(30, y),
         Offset(30 + chartWidth, y),
-        paint,
+        _gridPaint,
       );
 
-      // Y-axis labels
-      final gValue = 0.4 - (i * 0.2);
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: gValue.toStringAsFixed(1),
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 10,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(canvas, Offset(2, y - 6));
+      // Y-axis labels using cached TextPainter
+      _yAxisLabelPainters[i].paint(canvas, Offset(2, y - 6));
     }
 
     // X-axis time labels (30s, 20s, 10s, 0s) - left to right shows time ago
     for (int i = 0; i <= 3; i++) {
       final x = 30 + (chartWidth * i / 3);
-      final timeValue = (3 - i) * 10;
 
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: '${timeValue}s',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 10,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
+      // Use cached TextPainter for X-axis labels
+      final textPainter = _xAxisLabelPainters[i];
       textPainter.paint(
         canvas,
         Offset(x - textPainter.width / 2, size.height - 25),
@@ -150,15 +246,9 @@ class _AccelerationChartPainter extends CustomPainter {
     Canvas canvas,
     Size size,
     List<double> values,
-    Color color,
+    Paint linePaint,
   ) {
     if (values.length < 2) return;
-
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
 
     final chartHeight = size.height - 40;
     final chartWidth = size.width - 40;
@@ -180,45 +270,27 @@ class _AccelerationChartPainter extends CustomPainter {
       }
     }
 
-    canvas.drawPath(path, paint);
+    // Use cached Paint object passed as parameter
+    canvas.drawPath(path, linePaint);
   }
 
   void _drawLegend(Canvas canvas, Size size) {
-    final labels = [
-      ('Lateral', Colors.red),
-      ('Longitudinal', Colors.green),
-    ];
+    final colors = [lateralColor, longitudinalColor];
 
     double xOffset = size.width - 150;
     const double yOffset = 15.0;
 
-    for (var i = 0; i < labels.length; i++) {
-      final (label, color) = labels[i];
-
-      // Draw color indicator line
-      final paint = Paint()
-        ..color = color
-        ..strokeWidth = 2.0;
-
+    for (var i = 0; i < colors.length; i++) {
+      // Draw color indicator line using cached Paint with updated color
+      _legendLinePaint.color = colors[i];
       canvas.drawLine(
         Offset(xOffset, yOffset + (i * 15)),
         Offset(xOffset + 15, yOffset + (i * 15)),
-        paint,
+        _legendLinePaint,
       );
 
-      // Draw label text
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: label,
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 10,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(
+      // Draw label text using cached TextPainter
+      _legendLabelPainters[i].paint(
         canvas,
         Offset(xOffset + 20, yOffset + (i * 15) - 5),
       );
@@ -226,23 +298,12 @@ class _AccelerationChartPainter extends CustomPainter {
   }
 
   void _drawPlaceholder(Canvas canvas, Size size) {
-    final textPainter = TextPainter(
-      text: const TextSpan(
-        text: 'No data yet',
-        style: TextStyle(
-          color: Colors.grey,
-          fontSize: 14,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-
-    textPainter.layout();
-    textPainter.paint(
+    // Use cached TextPainter
+    _placeholderPainter.paint(
       canvas,
       Offset(
-        (size.width - textPainter.width) / 2,
-        (size.height - textPainter.height) / 2,
+        (size.width - _placeholderPainter.width) / 2,
+        (size.height - _placeholderPainter.height) / 2,
       ),
     );
   }

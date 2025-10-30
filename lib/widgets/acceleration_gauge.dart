@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/acceleration_reading.dart';
+import '../theme/data_visualization_colors.dart';
 
 /// Displays current G-force magnitude and components with color coding.
 ///
@@ -14,18 +15,18 @@ class AccelerationGauge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (reading == null) {
-      return const Text(
+      return Text(
         '-- g',
         style: TextStyle(
           fontSize: 48,
           fontWeight: FontWeight.bold,
-          color: Colors.grey,
+          color: Theme.of(context).colorScheme.outline,
         ),
       );
     }
 
     final magnitude = reading!.magnitude;
-    final color = _getColorForMagnitude(magnitude);
+    final color = _getColorForMagnitude(context, magnitude);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -43,12 +44,14 @@ class AccelerationGauge extends StatelessWidget {
 
         // Component displays
         _buildComponentRow(
+          context,
           'Lateral',
           reading!.lateralG,
           Icons.swap_horiz,
         ),
         const SizedBox(height: 8),
         _buildComponentRow(
+          context,
           'Longitudinal',
           reading!.longitudinalG,
           Icons.swap_vert,
@@ -58,11 +61,12 @@ class AccelerationGauge extends StatelessWidget {
   }
 
   /// Build a row showing a single G-force component
-  Widget _buildComponentRow(String label, double value, IconData icon) {
+  Widget _buildComponentRow(
+      BuildContext context, String label, double value, IconData icon) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.outline),
         const SizedBox(width: 8),
         SizedBox(
           width: 120,
@@ -88,12 +92,13 @@ class AccelerationGauge extends StatelessWidget {
 
   /// Get color based on G-force magnitude
   ///
-  /// Green: < 0.3g (gentle)
-  /// Orange: 0.3g - 0.6g (moderate)
-  /// Red: > 0.6g (hard)
-  Color _getColorForMagnitude(double magnitude) {
-    if (magnitude < 0.3) return Colors.green;
-    if (magnitude < 0.6) return Colors.orange;
-    return Colors.red;
+  /// Green/Primary: < 0.3g (gentle)
+  /// Orange/Warning: 0.3g - 0.6g (moderate)
+  /// Red/Danger: > 0.6g (hard)
+  Color _getColorForMagnitude(BuildContext context, double magnitude) {
+    final vizColors = Theme.of(context).extension<DataVisualizationColors>()!;
+    if (magnitude < 0.3) return Theme.of(context).colorScheme.primary;
+    if (magnitude < 0.6) return vizColors.gaugeWarning;
+    return vizColors.gaugeDanger;
   }
 }
