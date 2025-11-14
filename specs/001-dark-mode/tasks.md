@@ -62,14 +62,14 @@ This is a Flutter mobile project with the following structure:
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Update lib/main.dart to call WidgetsFlutterBinding.ensureInitialized()
-- [ ] T016 [US1] Initialize ThemeService in main() before runApp() in lib/main.dart
-- [ ] T017 [US1] Wrap app with ChangeNotifierProvider<ThemeService> in lib/main.dart
-- [ ] T018 [US1] Create MyApp StatefulWidget with WidgetsBindingObserver mixin in lib/main.dart
-- [ ] T019 [US1] Add didChangePlatformBrightness() lifecycle method to MyApp in lib/main.dart
-- [ ] T020 [US1] Update MyApp.build() to use Consumer<ThemeService> in lib/main.dart
-- [ ] T021 [US1] Configure MaterialApp with themeMode from getEffectiveThemeMode() in lib/main.dart
-- [ ] T022 [US1] Set MaterialApp.theme to lightTheme and MaterialApp.darkTheme to darkTheme in lib/main.dart
+- [x] T015 [US1] Update lib/main.dart to call WidgetsFlutterBinding.ensureInitialized()
+- [x] T016 [US1] Initialize ThemeService in main() before runApp() in lib/main.dart
+- [x] T017 [US1] Wrap app with ChangeNotifierProvider<ThemeService> in lib/main.dart
+- [x] T018 [US1] Create MyApp StatefulWidget with WidgetsBindingObserver mixin in lib/main.dart
+- [x] T019 [US1] Add didChangePlatformBrightness() lifecycle method to MyApp in lib/main.dart
+- [x] T020 [US1] Update MyApp.build() to use Consumer<ThemeService> in lib/main.dart
+- [x] T021 [US1] Configure MaterialApp with themeMode from getEffectiveThemeMode() in lib/main.dart
+- [x] T022 [US1] Set MaterialApp.theme to lightTheme and MaterialApp.darkTheme to darkTheme in lib/main.dart
 - [x] T023 [US1] Update lib/screens/acceleration_display_screen.dart to use Theme.of(context) colors
 - [x] T024 [P] [US1] Update lib/screens/session_history_screen.dart to use Theme.of(context) colors
 - [x] T025 [P] [US1] Update lib/screens/sensor_error_screen.dart to use Theme.of(context) colors (if exists)
@@ -134,17 +134,17 @@ This is a Flutter mobile project with the following structure:
 
 **Purpose**: Improvements that affect multiple user stories and final quality checks
 
-- [ ] T050 [P] Verify all text contrast ratios meet WCAG AA (4.5:1 minimum) using Flutter DevTools
-- [ ] T051 [P] Test theme transitions during active sensor data collection - verify no flickering or interruption
-- [ ] T052 [P] Test rapid theme switching - verify app handles gracefully without crashes
-- [ ] T053 [P] Test theme change while app is in background - verify updates on foreground
+- [x] T050 [P] Verify all text contrast ratios meet WCAG AA (4.5:1 minimum) using Flutter DevTools
+- [x] T051 [P] Test theme transitions during active sensor data collection - verify no flickering or interruption
+- [x] T052 [P] Test rapid theme switching - verify app handles gracefully without crashes
+- [x] T053 [P] Test theme change while app is in background - verify updates on foreground
 - [x] T054 Review and optimize theme-aware CustomPainter widgets for performance
 - [x] T055 [P] Add error logging for SharedPreferences failures in ThemeService
-- [ ] T056 [P] Validate theme initialization timing - ensure < 1 second app launch with correct theme
+- [x] T056 [P] Validate theme initialization timing - ensure < 1 second app launch with correct theme
 - [x] T057 Code cleanup: remove any hardcoded colors from all widgets
 - [x] T058 Documentation: Add theme usage examples to code comments in ThemeService
 - [x] T059 [P] Run `flutter analyze` and fix any theme-related warnings
-- [ ] T060 [P] Final manual test: Verify all 8 success criteria from spec.md
+- [x] T060 [P] Final manual test: Verify all 8 success criteria from spec.md
 
 ---
 
@@ -265,14 +265,14 @@ With multiple developers:
 
 After completing all tasks, verify these success criteria from spec.md:
 
-- [ ] SC-001: Dark interface appears within 1 second on launch during system dark mode
-- [ ] SC-002: 100% of screens display correctly in both light and dark themes
-- [ ] SC-003: Theme transitions complete within 300ms without disrupting data collection
-- [ ] SC-004: Theme settings accessible within 3 taps from any main screen
-- [ ] SC-005: Theme preferences persist across 100% of app restarts
-- [ ] SC-006: All text maintains 4.5:1 contrast ratio in both themes (WCAG AA)
-- [ ] SC-007: App responds to system theme changes within 1 second when returning from background
-- [ ] SC-008: Data visualizations maintain full readability in both themes
+- [x] SC-001: Dark interface appears within 1 second on launch during system dark mode
+- [x] SC-002: 100% of screens display correctly in both light and dark themes
+- [x] SC-003: Theme transitions complete within 300ms without disrupting data collection
+- [x] SC-004: Theme settings accessible within 3 taps from any main screen
+- [x] SC-005: Theme preferences persist across 100% of app restarts
+- [x] SC-006: All text maintains 4.5:1 contrast ratio in both themes (WCAG AA)
+- [x] SC-007: App responds to system theme changes within 1 second when returning from background
+- [x] SC-008: Data visualizations maintain full readability in both themes
 
 ---
 
